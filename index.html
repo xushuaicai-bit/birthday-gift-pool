@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>🎂 生日礼物池 · 一起给 TA 挑好礼</title>
+<style>
+  :root{
+    --bg:#EDE7DF;
+    --card:#FBF8F3;
+    --ink:#5A5550;
+    --muted:#938A80;
+    --line:#E0D8CD;
+    --sage:#A7B5A0;
+    --rose:#C9A9A6;
+    --blue:#A9B7C4;
+    --mauve:#B6A9BC;
+    --sand:#D8C7B0;
+    --terra:#C98B7A;
+    --terra-d:#B57866;
+    --gold:#D9B779;
+    --shadow:0 10px 30px rgba(90,85,80,.12);
+    --shadow-sm:0 4px 14px rgba(90,85,80,.10);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Segoe UI",sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(1200px 500px at 80% -10%, #F3ECE2 0%, transparent 60%),
+      radial-gradient(900px 500px at -10% 10%, #E9E2D6 0%, transparent 55%),
+      var(--bg);
+    min-height:100%;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:0 20px 80px;}
+
+  header{padding:38px 0 18px;text-align:center;position:relative;}
+  .cake{font-size:54px;animation:bob 3.2s ease-in-out infinite;display:inline-block;}
+  @keyframes bob{0%,100%{transform:translateY(0) rotate(-2deg);}50%{transform:translateY(-8px) rotate(2deg);}}
+  .title{font-size:30px;font-weight:800;letter-spacing:.5px;margin:6px 0 4px;color:var(--ink);}
+  .title .edit{
+    border:none;background:transparent;color:var(--terra-d);
+    border-bottom:2px dashed var(--terra);outline:none;text-align:center;
+    font:inherit;font-weight:800;min-width:60px;padding:0 4px;
+  }
+  .title .edit:focus{background:#fff5f0;}
+  .subtitle{color:var(--muted);font-size:15px;margin-bottom:14px;}
+
+  .topbar{display:flex;gap:12px;justify-content:center;align-items:center;flex-wrap:wrap;margin-top:10px;}
+  .me-box{
+    display:flex;align-items:center;gap:8px;background:var(--card);
+    border:1px solid var(--line);border-radius:999px;padding:7px 14px;box-shadow:var(--shadow-sm);
+  }
+  .me-box label{font-size:13px;color:var(--muted);}
+  .me-box input{border:none;background:transparent;outline:none;font:inherit;font-weight:600;color:var(--ink);width:90px;}
+  .pill-btn{
+    border:none;cursor:pointer;font:inherit;font-weight:700;padding:11px 22px;border-radius:999px;
+    color:#fff;background:var(--terra);box-shadow:0 8px 20px rgba(201,139,122,.35);
+    transition:transform .15s, box-shadow .15s;
+  }
+  .pill-btn:hover{transform:translateY(-2px);box-shadow:0 12px 26px rgba(201,139,122,.45);}
+  .pill-btn:active{transform:translateY(0) scale(.98);}
+  .pill-btn.ghost{background:#fff;color:var(--terra-d);border:1px solid var(--line);box-shadow:var(--shadow-sm);}
+  .pill-btn.ghost:hover{box-shadow:var(--shadow);}
+
+  .syncbar{
+    display:flex;align-items:center;justify-content:center;gap:8px;
+    margin-top:14px;font-size:12.5px;color:var(--muted);
+  }
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--sage);box-shadow:0 0 0 0 rgba(167,181,160,.6);animation:pulse 1.8s infinite;}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(167,181,160,.6);}70%{box-shadow:0 0 0 8px rgba(167,181,160,0);}100%{box-shadow:0 0 0 0 rgba(167,181,160,0);}}
+
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:26px 0 10px;}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;text-align:center;box-shadow:var(--shadow-sm);}
+  .stat .n{font-size:26px;font-weight:800;color:var(--ink);}
+  .stat .l{font-size:12.5px;color:var(--muted);margin-top:2px;}
+  .stat.s1 .n{color:var(--sage);} .stat.s2 .n{color:var(--terra);}
+  .stat.s3 .n{color:var(--blue);} .stat.s4 .n{color:var(--mauve);}
+
+  .filters{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:18px 0 22px;}
+  .chip{cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--muted);
+    padding:8px 16px;border-radius:999px;font:inherit;font-weight:600;font-size:14px;transition:.15s;}
+  .chip:hover{border-color:var(--terra);color:var(--terra-d);}
+  .chip.active{background:var(--terra);color:#fff;border-color:var(--terra);}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:18px;}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:20px;padding:18px 18px 16px;
+    box-shadow:var(--shadow-sm);position:relative;overflow:hidden;transition:transform .18s, box-shadow .18s;
+    animation:pop .35s ease both;
+  }
+  @keyframes pop{from{opacity:0;transform:translateY(14px) scale(.96);}to{opacity:1;transform:none;}}
+  .card:hover{transform:translateY(-5px);box-shadow:var(--shadow);}
+  .card.bought{border-color:var(--sage);background:linear-gradient(180deg,#FBF8F3,#F4F7F1);}
+  .card .emoji{font-size:40px;line-height:1;}
+  .card .gname{font-size:17px;font-weight:800;margin:10px 0 4px;color:var(--ink);word-break:break-word;}
+  .card .note{font-size:13px;color:var(--muted);min-height:18px;word-break:break-word;}
+  .card .price{display:inline-block;margin-top:8px;font-weight:700;color:var(--terra-d);
+    background:#FBEDE7;padding:3px 10px;border-radius:999px;font-size:13px;}
+  .card .price.free{color:var(--sage);background:#EEF2EA;}
+  .who{display:flex;align-items:center;gap:7px;margin-top:12px;}
+  .avatar{width:26px;height:26px;border-radius:50%;color:#fff;font-size:12px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .who .label{font-size:12.5px;color:var(--muted);}
+  .who .label b{color:var(--ink);}
+  .card .actions{display:flex;gap:8px;margin-top:14px;}
+  .act{flex:1;cursor:pointer;border:1px solid var(--line);background:#fff;color:var(--ink);
+    border-radius:12px;padding:8px;font:inherit;font-weight:700;font-size:13px;transition:.15s;
+    display:flex;align-items:center;justify-content:center;gap:5px;}
+  .act:hover{border-color:var(--terra);}
+  .act.heart.on{background:#FBEDE7;border-color:var(--rose);color:var(--terra-d);}
+  .act.buy.on{background:var(--sage);border-color:var(--sage);color:#fff;}
+  .act.del{flex:0 0 auto;color:var(--muted);}
+  .act.del:hover{border-color:#D9A7A0;color:#C25C4E;}
+  .heart-pop{animation:heartpop .4s ease;}
+  @keyframes heartpop{0%{transform:scale(1);}40%{transform:scale(1.4);}100%{transform:scale(1);}}
+  .supporters{font-size:12px;color:var(--muted);margin-top:8px;min-height:16px;}
+  .badge-bought{position:absolute;top:12px;right:-30px;transform:rotate(38deg);background:var(--sage);
+    color:#fff;font-size:11px;font-weight:800;padding:4px 34px;letter-spacing:1px;box-shadow:0 3px 8px rgba(0,0,0,.12);}
+
+  .empty{grid-column:1/-1;text-align:center;padding:50px 20px;color:var(--muted);
+    border:2px dashed var(--line);border-radius:20px;background:rgba(255,255,255,.4);}
+  .empty .big{font-size:42px;margin-bottom:10px;}
+
+  .summary{margin-top:34px;background:var(--card);border:1px solid var(--line);border-radius:22px;padding:24px;box-shadow:var(--shadow-sm);}
+  .summary h3{font-size:19px;margin-bottom:6px;display:flex;align-items:center;gap:8px;}
+  .summary .hint{color:var(--muted);font-size:13px;margin-bottom:16px;}
+  .sum-list{display:flex;flex-direction:column;gap:10px;}
+  .sum-item{display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--line);border-radius:14px;background:#fff;}
+  .sum-item .e{font-size:24px;}
+  .sum-item .info{flex:1;}
+  .sum-item .info .t{font-weight:700;}
+  .sum-item .info .b{font-size:12.5px;color:var(--muted);}
+  .sum-item .p{font-weight:800;color:var(--terra-d);}
+  .sum-total{display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:16px;border-top:1px dashed var(--line);font-size:18px;font-weight:800;}
+  .sum-total .amt{color:var(--terra);}
+
+  .overlay{position:fixed;inset:0;background:rgba(90,85,80,.32);backdrop-filter:blur(3px);
+    display:none;align-items:center;justify-content:center;padding:20px;z-index:50;}
+  .overlay.show{display:flex;animation:fade .2s ease;}
+  @keyframes fade{from{opacity:0;}to{opacity:1;}}
+  .modal{background:var(--card);border-radius:24px;width:100%;max-width:440px;padding:26px;
+    box-shadow:0 20px 60px rgba(90,85,80,.3);animation:rise .25s ease;max-height:90vh;overflow:auto;}
+  @keyframes rise{from{transform:translateY(20px);opacity:0;}to{transform:none;opacity:1;}}
+  .modal h3{font-size:20px;margin-bottom:18px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:13px;font-weight:700;color:var(--muted);margin-bottom:6px;}
+  .field input, .field textarea{width:100%;border:1px solid var(--line);border-radius:12px;padding:11px 13px;
+    font:inherit;background:#fff;color:var(--ink);outline:none;transition:.15s;}
+  .field input:focus, .field textarea:focus{border-color:var(--terra);box-shadow:0 0 0 3px rgba(201,139,122,.15);}
+  .field textarea{resize:vertical;min-height:60px;}
+  .emoji-row{display:flex;flex-wrap:wrap;gap:8px;}
+  .emoji-opt{cursor:pointer;font-size:24px;width:46px;height:46px;border:1px solid var(--line);border-radius:12px;
+    display:flex;align-items:center;justify-content:center;background:#fff;transition:.15s;}
+  .emoji-opt:hover{border-color:var(--terra);}
+  .emoji-opt.sel{background:var(--terra);border-color:var(--terra);transform:scale(1.05);}
+  .modal-actions{display:flex;gap:10px;margin-top:8px;}
+  .modal-actions .pill-btn{flex:1;}
+
+  .seed-wrap{border:1px dashed var(--terra);border-radius:16px;padding:14px;margin-bottom:18px;background:#FCF4EF;}
+  .seed-title{font-size:13px;font-weight:800;color:var(--terra-d);margin-bottom:10px;}
+  .seed-title span{font-weight:600;color:var(--muted);font-size:11.5px;}
+  .seed-list{display:flex;flex-direction:column;gap:8px;max-height:248px;overflow:auto;}
+  .seed-item{display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid var(--line);border-radius:12px;background:#fff;}
+  .seed-item .s-emoji{font-size:22px;flex:0 0 auto;}
+  .seed-item .s-main{flex:1;min-width:0;}
+  .seed-item .s-name{font-weight:700;font-size:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .seed-item .s-price{font-size:11.5px;font-weight:700;color:var(--terra-d);background:#FBEDE7;padding:1px 8px;border-radius:999px;}
+  .seed-item .s-note{font-size:12px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .seed-use{flex:0 0 auto;cursor:pointer;border:1px solid var(--terra);background:#fff;color:var(--terra-d);
+    border-radius:10px;padding:7px 12px;font:inherit;font-weight:700;font-size:13px;transition:.15s;}
+  .seed-use:hover{background:var(--terra);color:#fff;}
+  .seed-use:active{transform:scale(.96);}
+
+  #toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%) translateY(20px);
+    background:var(--ink);color:#fff;padding:12px 22px;border-radius:999px;font-weight:600;font-size:14px;
+    opacity:0;pointer-events:none;transition:.25s;z-index:80;box-shadow:var(--shadow);max-width:90vw;text-align:center;}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  #confetti{position:fixed;inset:0;pointer-events:none;z-index:90;}
+
+  .footer{text-align:center;color:var(--muted);font-size:12.5px;margin-top:40px;line-height:1.7;}
+  .dice-row{display:flex;justify-content:center;gap:10px;margin-top:6px;flex-wrap:wrap;}
+  .tool-btn{background:none;border:none;cursor:pointer;color:var(--muted);font:inherit;font-size:13px;text-decoration:underline dotted;padding:4px 8px;}
+  .tool-btn:hover{color:var(--terra-d);}
+
+  @media(max-width:640px){
+    .stats{grid-template-columns:repeat(2,1fr);}
+    .title{font-size:24px;}
+    .cake{font-size:44px;}
+  }
+</style>
+</head>
+<body>
+  <canvas id="confetti"></canvas>
+  <div class="wrap">
+    <header>
+      <div class="cake">🎂</div>
+      <div class="title">给 <input id="starName" class="edit" value="寿星" maxlength="12" /> 的生日礼物池</div>
+      <div class="subtitle">🎁 大家一起出主意，最后挑出最想买的那个 / 那些～</div>
+      <div class="topbar">
+        <div class="me-box">
+          <label>我是</label>
+          <input id="meName" placeholder="你的名字" maxlength="10" />
+        </div>
+        <button class="pill-btn" id="addBtn">➕ 添加礼物</button>
+        <button class="pill-btn ghost" id="diceBtn">🎲 帮我挑一个</button>
+        <button class="pill-btn ghost" id="shareBtn">🔗 分享链接</button>
+        <button class="pill-btn ghost" id="importBtn">📥 导入</button>
+      </div>
+      <div class="syncbar">
+        <span class="dot" id="syncDot"></span>
+        <span id="syncText">💾 已存本地 · 改完点「分享链接」同步给朋友</span>
+      </div>
+    </header>
+
+    <section class="stats">
+      <div class="stat s1"><div class="n" id="stTotal">0</div><div class="l">礼物候选</div></div>
+      <div class="stat s2"><div class="n" id="stBought">0</div><div class="l">决定要买</div></div>
+      <div class="stat s3"><div class="n" id="stBudget">¥0</div><div class="l">已选预算</div></div>
+      <div class="stat s4"><div class="n" id="stPeople">0</div><div class="l">参与人数</div></div>
+    </section>
+
+    <div class="filters" id="filters">
+      <button class="chip active" data-f="all">全部</button>
+      <button class="chip" data-f="todo">待定</button>
+      <button class="chip" data-f="bought">已决定买</button>
+      <button class="chip" data-f="hot">🔥 最受欢迎</button>
+    </div>
+
+    <section class="grid" id="grid"></section>
+
+    <section class="summary" id="summary">
+      <h3>✅ 已决定要买的清单</h3>
+      <div class="hint">把心动的礼物标记「买它！」后，会自动汇总在这里，方便大家分工采购～</div>
+      <div class="sum-list" id="sumList"></div>
+      <div class="sum-total"><span>合计预算</span><span class="amt" id="sumTotal">¥0</span></div>
+    </section>
+
+    <div class="dice-row">
+      <button class="tool-btn" id="clearBtn">🧹 清空礼物池</button>
+    </div>
+
+    <div class="footer">
+      这是一个 <b>完全离线也能用</b> 的协作页：数据存在你自己的浏览器里。<br>
+      怎么和朋友同步？→ 你改完后点右上角 <b>「🔗 分享链接」</b> 复制网址发群里，<br>
+      朋友打开链接会自动合并礼物池；TA 改完也点「分享链接」回发给你，循环即可 💛
+    </div>
+  </div>
+
+  <div class="overlay" id="overlay">
+    <div class="modal">
+      <h3>🎁 提议一个礼物</h3>
+      <div class="field" style="margin-bottom:0;">
+        <div class="seed-wrap">
+          <div class="seed-title">📌 备选灵感 · 小红书精选 <span>（33岁男生 · ¥500–3000，点「选用」填到下面）</span></div>
+          <div class="seed-list" id="seedList"></div>
+        </div>
+      </div>
+      <div class="field">
+        <label>礼物名称 *</label>
+        <input id="fName" placeholder="例如：蓝牙耳机 / 一束花 / 手作蛋糕" maxlength="40" />
+      </div>
+      <div class="field">
+        <label>挑个图标</label>
+        <div class="emoji-row" id="emojiRow"></div>
+      </div>
+      <div class="field">
+        <label>预算（可选，留空表示心意无价）</label>
+        <input id="fPrice" type="number" min="0" placeholder="¥ 价格" />
+      </div>
+      <div class="field">
+        <label>推荐理由（可选）</label>
+        <textarea id="fNote" placeholder="为什么觉得 TA 会喜欢？" maxlength="120"></textarea>
+      </div>
+      <div class="field">
+        <label>推荐人</label>
+        <input id="fBy" placeholder="你的名字" maxlength="10" />
+      </div>
+      <div class="modal-actions">
+        <button class="pill-btn ghost" id="cancelBtn">取消</button>
+        <button class="pill-btn" id="saveBtn">丢进礼物池 🎉</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+<script>
+(function(){
+  const EMOJIS=["🎁","🎀","🌸","🎧","📚","☕","🍰","🧸","💄","👟","🎮","📱","🕯️","🍫","💐","🎨","🧣","⌚","🎫","🪴"];
+
+  // 小红书精选初始备选池（33岁男生 / 预算500-3000），首次打开自动载入
+  const SEED=[
+    {name:"无线降噪耳机",emoji:"🎧",by:"小红书精选",price:1299,note:"索尼/Bose通勤差旅神器，男生高频刚需，闭眼入不踩雷"},
+    {name:"智能运动手表",emoji:"⌚",by:"小红书精选",price:1499,note:"华为GT/Garmin，监测健康运动，商务运动都百搭"},
+    {name:"机械键盘",emoji:"⌨️",by:"小红书精选",price:999,note:"打游戏办公都香，手感党最爱"},
+    {name:"高端电动剃须刀",emoji:"🪒",by:"小红书精选",price:999,note:"博朗/飞利浦，每天用得到的体面好物"},
+    {name:"男士木质调香水",emoji:"🌿",by:"小红书精选",price:899,note:"拉夫劳伦/PRADA，沉稳不甜腻提升魅力"},
+    {name:"轻奢真皮皮带/钱包",emoji:"👔",by:"小红书精选",price:699,note:"Coach/Bellroy，职场成熟男必备低调有质感"},
+    {name:"颈部按摩仪/筋膜枪",emoji:"💆",by:"小红书精选",price:1299,note:"久坐党福音，缓解肩颈酸痛"},
+    {name:"品牌运动跑鞋",emoji:"👟",by:"小红书精选",price:899,note:"Nike/Asics，颜值与舒适兼顾"},
+    {name:"高颜值蓝牙音响",emoji:"🔊",by:"小红书精选",price:1599,note:"Marshall复古造型好音质，居家摆设"},
+    {name:"胶囊咖啡机/手冲套装",emoji:"☕",by:"小红书精选",price:799,note:"早晨仪式感拉满，咖啡党开心"},
+    {name:"千元级腕表",emoji:"🕰️",by:"小红书精选",price:1999,note:"Seiko精工，时间艺术品提升品味"},
+    {name:"通勤质感双肩包",emoji:"🎒",by:"小红书精选",price:1299,note:"Coach/Dickies，上班出差一个包搞定"},
+    {name:"平板电脑",emoji:"📱",by:"小红书精选",price:2599,note:"iPad mini/华为MatePad，看剧阅读便携"},
+    {name:"Switch游戏机",emoji:"🎮",by:"小红书精选",price:2099,note:"爱打游戏的男生真香"},
+    {name:"运动相机",emoji:"📷",by:"小红书精选",price:2999,note:"Insta360/DJI，记录生活Vlog必备"},
+    {name:"万宝龙钢笔",emoji:"🖊️",by:"小红书精选",price:2900,note:"商务男社交硬通货，仪式感满分"}
+  ];
+
+  const LS_KEY="bgp_data_v2";
+  const LS_ME="bgp_me", LS_STAR="bgp_star";
+
+  let gifts=[];
+  let filter="all";
+  let pickedEmoji="🎁";
+  let prevCount=0;
+
+  function $(id){return document.getElementById(id);}
+  const PALETTE=["#A7B5A0","#C9A9A6","#A9B7C4","#B6A9BC","#D8C7B0","#C98B7A","#9FB6C9","#CBA6B0"];
+  function colorOf(name){let h=0;for(const c of (name||"?"))h=(h*31+c.charCodeAt(0))>>>0;return PALETTE[h%PALETTE.length];}
+  function initial(name){return (name||"?").trim().charAt(0).toUpperCase();}
+  function escapeHtml(s){return (s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+  function me(){return ($("meName").value.trim()||"匿名");}
+  let toastT;
+  function toast(msg){
+    const t=$("toast");t.textContent=msg;t.classList.add("show");
+    clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("show"),2600);
+  }
+
+  // ---------- storage ----------
+  function load(){
+    try{
+      const raw=localStorage.getItem(LS_KEY);
+      if(raw){const d=JSON.parse(raw);if(d&&Array.isArray(d.gifts))return d.gifts;}
+    }catch(e){}
+    return []; // 主池初始为空；小红书精选仅作为「添加礼物」时的备选灵感
+  }
+  function save(){try{localStorage.setItem(LS_KEY,JSON.stringify({gifts}));}catch(e){}}
+
+  function mergePools(local,incoming){
+    const map=new Map();
+    (local||[]).forEach(g=>map.set(g.id,{...g,votes:[...(g.votes||[])]}));
+    (incoming||[]).forEach(g=>{
+      const cur=map.get(g.id);
+      if(!cur){map.set(g.id,{...g,votes:[...(g.votes||[])]});}
+      else{
+        const keep=(g.ts||0)>=(cur.ts||0)?g:cur;
+        const votes=Array.from(new Set([...(cur.votes||[]),...(g.votes||[])]));
+        map.set(g.id,{...keep,votes});
+      }
+    });
+    return [...map.values()];
+  }
+
+  // ---------- encode / share / import ----------
+  function encodeData(){return btoa(unescape(encodeURIComponent(JSON.stringify({v:1,gifts:gifts.filter(g=>!g.deleted)}))));}
+  function buildUrl(){return location.origin+location.pathname+"#d="+encodeData();}
+  function shareLink(){
+    const url=buildUrl();
+    try{history.replaceState(null,"",url);}catch(e){}
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(url).then(()=>toast("🔗 链接已复制，发到群里大家打开即同步！")).catch(()=>{prompt("复制下面的链接发到群里：",url);});
+    }else{prompt("复制下面的链接发到群里：",url);}
+  }
+  function importLink(){
+    const txt=prompt("粘贴朋友发来的分享链接或代码：","");
+    if(!txt)return;
+    let b64=txt.trim();
+    if(b64.indexOf("#d=")>=0)b64=b64.split("#d=")[1];
+    try{
+      const json=decodeURIComponent(escape(atob(b64)));
+      const data=JSON.parse(json);
+      gifts=mergePools(gifts,data.gifts||[]);
+      save();render();
+      toast("📥 已导入并合并礼物池");
+    }catch(e){toast("链接无效，请检查后重试");}
+  }
+  function applyHash(){
+    if(location.hash.indexOf("#d=")===0){
+      try{
+        const b64=location.hash.slice(3);
+        const json=decodeURIComponent(escape(atob(b64)));
+        const data=JSON.parse(json);
+        gifts=mergePools(gifts,data.gifts||[]);
+        save();
+        try{history.replaceState(null,"",location.pathname+location.search);}catch(e){}
+        toast("💛 已同步朋友分享的礼物池");
+      }catch(e){console.error(e);}
+    }
+  }
+
+  // ---------- mutations ----------
+  function addGift(g){
+    gifts.push({id:"u_"+Date.now()+"_"+Math.random().toString(36).slice(2,7),
+      name:g.name,emoji:g.emoji,by:g.by,price:g.price,note:g.note,votes:[],bought:false,deleted:false,ts:Date.now()});
+    save();render();
+  }
+  function toggleVote(id){
+    const g=gifts.find(x=>x.id===id);if(!g)return;
+    const m=me();const i=(g.votes||[]).indexOf(m);
+    let added=false;
+    if(i>=0)g.votes.splice(i,1);else{g.votes.push(m);added=true;}
+    g.ts=Date.now();save();render();
+    if(added)confettiBurst(14);
+  }
+  function toggleBuy(id){
+    const g=gifts.find(x=>x.id===id);if(!g)return;
+    g.bought=!g.bought;g.ts=Date.now();save();render();
+    if(g.bought){confettiBurst(30);toast("已加入采购清单 🎉");}
+  }
+  function deleteGift(id){
+    const g=gifts.find(x=>x.id===id);if(!g)return;
+    g.deleted=true;g.ts=Date.now();save();render();
+  }
+  function clearAll(){
+    gifts.forEach(g=>{g.deleted=true;g.ts=Date.now();});save();render();toast("已清空");
+  }
+
+  // ---------- render ----------
+  function render(){
+    const m=me();
+    let list=gifts.filter(g=>!g.deleted).slice();
+    if(filter==="todo")list=list.filter(g=>!g.bought);
+    else if(filter==="bought")list=list.filter(g=>g.bought);
+    else if(filter==="hot")list=list.slice().sort((a,b)=>(b.votes?b.votes.length:0)-(a.votes?a.votes.length:0));
+
+    const grid=$("grid");
+    grid.innerHTML="";
+    if(list.length===0){
+      grid.innerHTML=`<div class="empty"><div class="big">🪄</div>
+        礼物池还空空如也～<br>点右上角「➕ 添加礼物」，从「小红书精选」备选里挑一个，或自己填一个丢进来吧！</div>`;
+    }
+    list.forEach(g=>{
+      const votes=g.votes||[];
+      const voted=votes.includes(m);
+      const price=Number(g.price)||0;
+      const priceHtml=price>0?`<span class="price">¥${price}</span>`:`<span class="price free">心意无价</span>`;
+      const supporters=votes.length?`💖 ${votes.length} 人想要`+(votes.length<=3?`：${votes.join("、")}`:""):"";
+      const card=document.createElement("div");
+      card.className="card"+(g.bought?" bought":"");
+      card.innerHTML=`
+        ${g.bought?'<div class="badge-bought">已选</div>':''}
+        <div class="emoji">${escapeHtml(g.emoji||"🎁")}</div>
+        <div class="gname">${escapeHtml(g.name)}</div>
+        ${g.note?`<div class="note">${escapeHtml(g.note)}</div>`:''}
+        ${priceHtml}
+        <div class="who">
+          <div class="avatar" style="background:${colorOf(g.by)}">${initial(g.by)}</div>
+          <div class="label"><b>${escapeHtml(g.by)}</b> 推荐</div>
+        </div>
+        <div class="supporters">${supporters}</div>
+        <div class="actions">
+          <button class="act heart ${voted?'on':''}" data-act="vote" data-id="${g.id}">${voted?'💗':'🤍'} ${votes.length}</button>
+          <button class="act buy ${g.bought?'on':''}" data-act="buy" data-id="${g.id}">${g.bought?'✓ 已买':'买它！'}</button>
+          <button class="act del" data-act="del" data-id="${g.id}" title="删除">🗑️</button>
+        </div>`;
+      grid.appendChild(card);
+    });
+    if(prevCount && list.length>prevCount){toast("🎁 礼物池更新啦！");}
+    prevCount=list.length;
+    updateStats();
+    renderSummary();
+  }
+
+  function updateStats(){
+    const live=gifts.filter(g=>!g.deleted);
+    $("stTotal").textContent=live.length;
+    const bought=live.filter(g=>g.bought);
+    $("stBought").textContent=bought.length;
+    const budget=bought.reduce((s,g)=>s+(Number(g.price)||0),0);
+    $("stBudget").textContent="¥"+budget;
+    const people=new Set(live.map(g=>g.by));
+    $("stPeople").textContent=people.size;
+  }
+
+  function renderSummary(){
+    const bought=gifts.filter(g=>!g.deleted&&g.bought);
+    const sumList=$("sumList");
+    if(bought.length===0){
+      sumList.innerHTML=`<div style="color:var(--muted);font-size:14px;padding:6px 0;">还没有决定要买的礼物，去上面挑挑吧 👆</div>`;
+    }else{
+      sumList.innerHTML=bought.map(g=>{
+        const price=Number(g.price)||0;
+        return `<div class="sum-item">
+          <div class="e">${escapeHtml(g.emoji||"🎁")}</div>
+          <div class="info"><div class="t">${escapeHtml(g.name)}</div>
+            <div class="b">${escapeHtml(g.by)} 推荐${g.note?' · '+escapeHtml(g.note):''}</div></div>
+          <div class="p">${price>0?'¥'+price:'心意无价'}</div>
+        </div>`;
+      }).join("");
+    }
+    const total=bought.reduce((s,g)=>s+(Number(g.price)||0),0);
+    $("sumTotal").textContent="¥"+total;
+  }
+
+  // ---------- confetti ----------
+  const cv=$("confetti"),ctx=cv.getContext("2d");
+  let parts=[];
+  function resize(){cv.width=innerWidth;cv.height=innerHeight;}
+  resize();addEventListener("resize",resize);
+  const COLORS=["#C98B7A","#A7B5A0","#A9B7C4","#B6A9BC","#D9B779","#C9A9A6"];
+  function confettiBurst(n){
+    for(let i=0;i<n;i++){
+      parts.push({x:innerWidth/2+(Math.random()-.5)*200,y:innerHeight/3,
+        vx:(Math.random()-.5)*9,vy:Math.random()*-9-3,s:6+Math.random()*6,
+        c:COLORS[Math.floor(Math.random()*COLORS.length)],
+        rot:Math.random()*6,vr:(Math.random()-.5)*.3,life:1});
+    }
+    if(!rafOn)loop();
+  }
+  let rafOn=false;
+  function loop(){
+    rafOn=true;ctx.clearRect(0,0,cv.width,cv.height);
+    parts.forEach(p=>{p.vy+=.25;p.x+=p.vx;p.y+=p.vy;p.rot+=p.vr;p.life-=.008;
+      ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot);ctx.globalAlpha=Math.max(p.life,0);
+      ctx.fillStyle=p.c;ctx.fillRect(-p.s/2,-p.s/2,p.s,p.s*.6);ctx.restore();});
+    parts=parts.filter(p=>p.life>0&&p.y<cv.height+40);
+    if(parts.length)requestAnimationFrame(loop);else{ctx.clearRect(0,0,cv.width,cv.height);rafOn=false;}
+  }
+
+  // ---------- events ----------
+  $("grid").addEventListener("click",e=>{
+    const btn=e.target.closest(".act");if(!btn)return;
+    const id=btn.dataset.id,act=btn.dataset.act;
+    const g=gifts.find(x=>x.id===id);if(!g)return;
+    if(act==="vote")toggleVote(id);
+    else if(act==="buy")toggleBuy(id);
+    else if(act==="del"){if(confirm(`确定删除「${g.name}」吗？`))deleteGift(id);}
+  });
+
+  $("filters").addEventListener("click",e=>{
+    const c=e.target.closest(".chip");if(!c)return;
+    [...document.querySelectorAll(".chip")].forEach(x=>x.classList.remove("active"));
+    c.classList.add("active");filter=c.dataset.f;render();
+  });
+
+  $("addBtn").onclick=()=>{
+    $("fName").value="";$("fPrice").value="";$("fNote").value="";
+    $("fBy").value=$("meName").value;pickedEmoji="🎁";
+    [...$("emojiRow").children].forEach((c,i)=>c.classList.toggle("sel",i===0));
+    $("overlay").classList.add("show");setTimeout(()=>$("fName").focus(),50);
+  };
+  $("cancelBtn").onclick=()=>$("overlay").classList.remove("show");
+  $("overlay").onclick=e=>{if(e.target===$("overlay"))$("overlay").classList.remove("show");};
+  $("saveBtn").onclick=async()=>{
+    const name=$("fName").value.trim();
+    if(!name){toast("礼物名称要填一下哦");$("fName").focus();return;}
+    const by=($("fBy").value.trim()||me());
+    const price=Math.max(0,parseFloat($("fPrice").value)||0);
+    const btn=$("saveBtn");btn.disabled=true;
+    try{
+      addGift({name,emoji:pickedEmoji,by,price,note:$("fNote").value.trim()});
+      $("overlay").classList.remove("show");confettiBurst(24);toast("🎉 已丢进礼物池！记得点「分享链接」同步给朋友");
+    }catch(e){toast("提交失败，请重试");}
+    btn.disabled=false;
+  };
+
+  $("diceBtn").onclick=()=>{
+    const live=gifts.filter(g=>!g.deleted);
+    if(live.length===0){toast("先加点礼物再抽签呀～");return;}
+    const pool=live.filter(g=>!g.bought);
+    const arr=pool.length?pool:live;
+    const pick=arr[Math.floor(Math.random()*arr.length)];
+    confettiBurst(40);
+    toast(`🎲 不如就选「${pick.name}」（${pick.by} 推荐）！`);
+    const card=[...$("grid").children].find(c=>c.querySelector(`[data-id="${pick.id}"]`));
+    if(card){card.scrollIntoView({behavior:"smooth",block:"center"});
+      card.animate([{transform:"scale(1)"},{transform:"scale(1.08)"},{transform:"scale(1)"}],{duration:700});}
+  };
+
+  $("shareBtn").onclick=shareLink;
+  $("importBtn").onclick=importLink;
+
+  $("clearBtn").onclick=()=>{
+    const live=gifts.filter(g=>!g.deleted);
+    if(live.length===0){toast("已经是空的啦");return;}
+    if(confirm("确定清空整个礼物池吗？此操作会删除所有人的数据，不可撤销。"))clearAll();
+  };
+
+  const meInput=$("meName");
+  meInput.value=localStorage.getItem(LS_ME)||"";
+  meInput.addEventListener("input",()=>localStorage.setItem(LS_ME,meInput.value));
+  const starInput=$("starName");
+  starInput.value=localStorage.getItem(LS_STAR)||"寿星";
+  starInput.addEventListener("input",()=>localStorage.setItem(LS_STAR,starInput.value));
+
+  const emojiRow=$("emojiRow");
+  EMOJIS.forEach((e,i)=>{
+    const d=document.createElement("div");
+    d.className="emoji-opt"+(i===0?" sel":"");
+    d.textContent=e;
+    d.onclick=()=>{pickedEmoji=e;[...emojiRow.children].forEach(c=>c.classList.remove("sel"));d.classList.add("sel");};
+    emojiRow.appendChild(d);
+  });
+
+  // ---------- 备选灵感（小红书精选）----------
+  function useSeed(idx){
+    const s=SEED[idx];if(!s)return;
+    $("fName").value=s.name;
+    $("fPrice").value=(s.price||"");
+    $("fNote").value=(s.note||"");
+    $("fBy").value=$("meName").value.trim();
+    pickedEmoji=s.emoji;
+    [...emojiRow.children].forEach(c=>c.classList.remove("sel"));
+    const match=[...emojiRow.children].find(c=>c.textContent===s.emoji);
+    if(match)match.classList.add("sel");
+    toast("已填入下方，确认后点「丢进礼物池」🎉");
+    const modal=$("overlay").querySelector(".modal");
+    if(modal)modal.scrollTop=0;
+    $("fName").focus();
+  }
+  function renderSeed(){
+    const wrap=$("seedList");if(!wrap)return;
+    wrap.innerHTML="";
+    SEED.forEach((s,idx)=>{
+      const price=Number(s.price)||0;
+      const item=document.createElement("div");
+      item.className="seed-item";
+      item.innerHTML=`
+        <span class="s-emoji">${escapeHtml(s.emoji||"🎁")}</span>
+        <div class="s-main">
+          <div class="s-name">${escapeHtml(s.name)}${price>0?`<span class="s-price">¥${price}</span>`:''}</div>
+          ${s.note?`<div class="s-note">${escapeHtml(s.note)}</div>`:''}
+        </div>
+        <button class="seed-use" data-idx="${idx}">选用</button>`;
+      wrap.appendChild(item);
+    });
+    wrap.querySelectorAll(".seed-use").forEach(b=>{
+      b.onclick=()=>useSeed(parseInt(b.dataset.idx,10));
+    });
+  }
+
+  // ---------- boot ----------
+  gifts=load();
+  renderSeed();
+  applyHash();
+  render();
+})();
+</script>
+</body>
+</html>
