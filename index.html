@@ -71,6 +71,7 @@
     margin-top:14px;font-size:12.5px;color:var(--muted);
   }
   .dot{width:8px;height:8px;border-radius:50%;background:var(--sage);box-shadow:0 0 0 0 rgba(167,181,160,.6);animation:pulse 1.8s infinite;}
+  .dot.err{background:#C25C4E;animation:none;}
   @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(167,181,160,.6);}70%{box-shadow:0 0 0 8px rgba(167,181,160,0);}100%{box-shadow:0 0 0 0 rgba(167,181,160,0);}}
 
   .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:26px 0 10px;}
@@ -208,12 +209,11 @@
         </div>
         <button class="pill-btn" id="addBtn">➕ 添加礼物</button>
         <button class="pill-btn ghost" id="diceBtn">🎲 帮我挑一个</button>
-        <button class="pill-btn ghost" id="shareBtn">🔗 分享链接</button>
-        <button class="pill-btn ghost" id="importBtn">📥 导入</button>
+        <button class="pill-btn ghost" id="shareBtn">🔗 邀请朋友</button>
       </div>
       <div class="syncbar">
         <span class="dot" id="syncDot"></span>
-        <span id="syncText">💾 已存本地 · 改完点「分享链接」同步给朋友</span>
+        <span id="syncText">☁️ 正在连接云端…</span>
       </div>
     </header>
 
@@ -245,9 +245,9 @@
     </div>
 
     <div class="footer">
-      这是一个 <b>完全离线也能用</b> 的协作页：数据存在你自己的浏览器里。<br>
-      怎么和朋友同步？→ 你改完后点右上角 <b>「🔗 分享链接」</b> 复制网址发群里，<br>
-      朋友打开链接会自动合并礼物池；TA 改完也点「分享链接」回发给你，循环即可 💛
+      这是一个 <b>云端实时协作</b> 的礼物池：所有人打开同一个链接，<br>
+      谁填了礼物、谁点了「想要」、谁标记「买它」，<b>大家立刻互相看到</b> ☁️<br>
+      把链接（就是本页地址）发到群里，朋友打开即可一起参与 💛
     </div>
   </div>
 
@@ -293,7 +293,7 @@
 (function(){
   const EMOJIS=["🎁","🎀","🌸","🎧","📚","☕","🍰","🧸","💄","👟","🎮","📱","🕯️","🍫","💐","🎨","🧣","⌚","🎫","🪴"];
 
-  // 小红书精选初始备选池（33岁男生 / 预算500-3000），首次打开自动载入
+  // 小红书精选初始备选池（33岁男生 / 预算500-3000），仅作为「添加礼物」时的备选灵感
   const SEED=[
     {name:"无线降噪耳机",emoji:"🎧",by:"小红书精选",price:1299,note:"索尼/Bose通勤差旅神器，男生高频刚需，闭眼入不踩雷"},
     {name:"智能运动手表",emoji:"⌚",by:"小红书精选",price:1499,note:"华为GT/Garmin，监测健康运动，商务运动都百搭"},
@@ -313,13 +313,24 @@
     {name:"万宝龙钢笔",emoji:"🖊️",by:"小红书精选",price:2900,note:"商务男社交硬通货，仪式感满分"}
   ];
 
-  const LS_KEY="bgp_data_v2";
-  const LS_ME="bgp_me", LS_STAR="bgp_star";
+  const LS_ME="bgp_me", LS_STAR="bgp_star", LS_LEGACY="bgp_data_v2";
+
+  // ===== Supabase 云端配置（收到公开密钥后替换下面的占位符）=====
+  const SUPABASE_URL="https://xvdrtboeogyojbvqghco.supabase.co";
+  const SUPABASE_ANON_KEY="sb_publishable_P-MD97h6rMlP_7HKVuOE2Q_ImVlaKyL";
+  const API_HEADERS={
+    'apikey':SUPABASE_ANON_KEY,
+    'Authorization':'Bearer '+SUPABASE_ANON_KEY,
+    'Content-Type':'application/json',
+    'Prefer':'return=representation'
+  };
 
   let gifts=[];
   let filter="all";
   let pickedEmoji="🎁";
   let prevCount=0;
+  let lastSig="";
+  let migrated=false;
 
   function $(id){return document.getElementById(id);}
   const PALETTE=["#A7B5A0","#C9A9A6","#A9B7C4","#B6A9BC","#D8C7B0","#C98B7A","#9FB6C9","#CBA6B0"];
@@ -333,99 +344,100 @@
     clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("show"),2600);
   }
 
-  // ---------- storage ----------
-  function load(){
-    try{
-      const raw=localStorage.getItem(LS_KEY);
-      if(raw){const d=JSON.parse(raw);if(d&&Array.isArray(d.gifts))return d.gifts;}
-    }catch(e){}
-    return []; // 主池初始为空；小红书精选仅作为「添加礼物」时的备选灵感
-  }
-  function save(){try{localStorage.setItem(LS_KEY,JSON.stringify({gifts}));}catch(e){}}
-
-  function mergePools(local,incoming){
-    const map=new Map();
-    (local||[]).forEach(g=>map.set(g.id,{...g,votes:[...(g.votes||[])]}));
-    (incoming||[]).forEach(g=>{
-      const cur=map.get(g.id);
-      if(!cur){map.set(g.id,{...g,votes:[...(g.votes||[])]});}
-      else{
-        const keep=(g.ts||0)>=(cur.ts||0)?g:cur;
-        const votes=Array.from(new Set([...(cur.votes||[]),...(g.votes||[])]));
-        map.set(g.id,{...keep,votes});
-      }
-    });
-    return [...map.values()];
+  function setSync(ok){
+    const dot=$("syncDot"),txt=$("syncText");
+    if(ok){dot.classList.remove("err");txt.textContent="☁️ 云端实时同步中 · 大家填的立刻互相看到";}
+    else{dot.classList.add("err");txt.textContent="⚠️ 云端连接异常，请刷新页面重试";}
   }
 
-  // ---------- encode / share / import ----------
-  function encodeData(){return btoa(unescape(encodeURIComponent(JSON.stringify({v:1,gifts:gifts.filter(g=>!g.deleted)}))));}
-  function buildUrl(){return location.origin+location.pathname+"#d="+encodeData();}
-  function shareLink(){
-    const url=buildUrl();
-    try{history.replaceState(null,"",url);}catch(e){}
-    if(navigator.clipboard&&navigator.clipboard.writeText){
-      navigator.clipboard.writeText(url).then(()=>toast("🔗 链接已复制，发到群里大家打开即同步！")).catch(()=>{prompt("复制下面的链接发到群里：",url);});
-    }else{prompt("复制下面的链接发到群里：",url);}
+  // ---------- cloud API ----------
+  async function api(method,body,idFilter){
+    let url=SUPABASE_URL+"/rest/v1/gifts"+(idFilter?("?"+idFilter):"");
+    const opt={method,headers:API_HEADERS};
+    if(body!==undefined)opt.body=JSON.stringify(body);
+    const res=await fetch(url,opt);
+    if(!res.ok){const t=await res.text().catch(()=>"");throw new Error("HTTP "+res.status+" "+t);}
+    if(res.status===204)return null;
+    return res.json();
   }
-  function importLink(){
-    const txt=prompt("粘贴朋友发来的分享链接或代码：","");
-    if(!txt)return;
-    let b64=txt.trim();
-    if(b64.indexOf("#d=")>=0)b64=b64.split("#d=")[1];
+  function dataSig(){
+    return gifts.map(g=>g.id+":"+(g.bought?1:0)+":"+(g.votes||[]).join(",")+":"+g.name).join("|");
+  }
+
+  async function refresh(){
     try{
-      const json=decodeURIComponent(escape(atob(b64)));
-      const data=JSON.parse(json);
-      gifts=mergePools(gifts,data.gifts||[]);
-      save();render();
-      toast("📥 已导入并合并礼物池");
-    }catch(e){toast("链接无效，请检查后重试");}
-  }
-  function applyHash(){
-    if(location.hash.indexOf("#d=")===0){
-      try{
-        const b64=location.hash.slice(3);
-        const json=decodeURIComponent(escape(atob(b64)));
-        const data=JSON.parse(json);
-        gifts=mergePools(gifts,data.gifts||[]);
-        save();
-        try{history.replaceState(null,"",location.pathname+location.search);}catch(e){}
-        toast("💛 已同步朋友分享的礼物池");
-      }catch(e){console.error(e);}
+      const rows=await api("GET",undefined,"select=*&order=created_at.asc");
+      gifts=(rows||[]).map(r=>({
+        id:r.id,name:r.name,emoji:r.emoji||"🎁",by:r.by_name,
+        price:r.price||0,note:r.note||"",votes:r.votes||[],bought:!!r.bought
+      }));
+      setSync(true);
+      migrateIfNeeded();
+      renderIfChanged();
+    }catch(e){
+      console.error("sync error",e);
+      setSync(false);
     }
   }
 
-  // ---------- mutations ----------
-  function addGift(g){
-    gifts.push({id:"u_"+Date.now()+"_"+Math.random().toString(36).slice(2,7),
-      name:g.name,emoji:g.emoji,by:g.by,price:g.price,note:g.note,votes:[],bought:false,deleted:false,ts:Date.now()});
-    save();render();
+  async function addGift(g){
+    await api("POST",[{name:g.name,emoji:g.emoji,by_name:g.by,price:g.price,note:g.note,votes:[],bought:false}]);
+    await refresh();
   }
-  function toggleVote(id){
+  async function toggleVote(id){
     const g=gifts.find(x=>x.id===id);if(!g)return;
-    const m=me();const i=(g.votes||[]).indexOf(m);
-    let added=false;
-    if(i>=0)g.votes.splice(i,1);else{g.votes.push(m);added=true;}
-    g.ts=Date.now();save();render();
-    if(added)confettiBurst(14);
+    const m=me();const arr=g.votes||[];const has=arr.includes(m);
+    const newVotes=has?arr.filter(v=>v!==m):[...arr,m];
+    g.votes=newVotes;renderIfChanged();if(!has)confettiBurst(14);
+    try{await api("PATCH",{votes:newVotes},"id=eq."+id);await refresh();}
+    catch(e){toast("同步失败，已刷新重试");await refresh();}
   }
-  function toggleBuy(id){
+  async function toggleBuy(id){
     const g=gifts.find(x=>x.id===id);if(!g)return;
-    g.bought=!g.bought;g.ts=Date.now();save();render();
+    g.bought=!g.bought;renderIfChanged();
     if(g.bought){confettiBurst(30);toast("已加入采购清单 🎉");}
+    try{await api("PATCH",{bought:g.bought},"id=eq."+id);await refresh();}
+    catch(e){toast("同步失败，已刷新重试");await refresh();}
   }
-  function deleteGift(id){
-    const g=gifts.find(x=>x.id===id);if(!g)return;
-    g.deleted=true;g.ts=Date.now();save();render();
+  async function deleteGift(id){
+    gifts=gifts.filter(x=>x.id!==id);renderIfChanged();
+    try{await api("DELETE",undefined,"id=eq."+id);await refresh();}
+    catch(e){toast("删除同步失败，已刷新");await refresh();}
   }
-  function clearAll(){
-    gifts.forEach(g=>{g.deleted=true;g.ts=Date.now();});save();render();toast("已清空");
+  async function clearAll(){
+    const ids=gifts.map(g=>g.id);
+    gifts=[];renderIfChanged();
+    try{ for(const id of ids){ await api("DELETE",undefined,"id=eq."+id); } await refresh(); }
+    catch(e){toast("清空同步失败，已刷新");await refresh();}
+  }
+
+  // ---------- 旧版本地数据迁移（朋友之前在旧版填过的，自动搬到云端）----------
+  function loadLegacy(){
+    try{
+      const raw=localStorage.getItem(LS_LEGACY);
+      if(!raw)return [];
+      const d=JSON.parse(raw);
+      if(d&&Array.isArray(d.gifts))return d.gifts.filter(g=>!g.deleted);
+    }catch(e){}
+    return [];
+  }
+  function migrateIfNeeded(){
+    if(migrated)return; migrated=true;
+    const local=loadLegacy();
+    if(local.length){
+      const rows=local.map(g=>({
+        name:g.name,emoji:g.emoji||"🎁",by_name:g.by||"匿名",
+        price:Number(g.price)||0,note:g.note||"",votes:(g.votes||[]),bought:!!g.bought
+      }));
+      api("POST",rows).then(()=>refresh()).catch(()=>{});
+      toast("已把你在旧版里填的礼物同步到云端 ☁️");
+    }
   }
 
   // ---------- render ----------
   function render(){
     const m=me();
-    let list=gifts.filter(g=>!g.deleted).slice();
+    let list=gifts.slice();
     if(filter==="todo")list=list.filter(g=>!g.bought);
     else if(filter==="bought")list=list.filter(g=>g.bought);
     else if(filter==="hot")list=list.slice().sort((a,b)=>(b.votes?b.votes.length:0)-(a.votes?a.votes.length:0));
@@ -466,10 +478,12 @@
     prevCount=list.length;
     updateStats();
     renderSummary();
+    lastSig=dataSig();
   }
+  function renderIfChanged(){ const s=dataSig(); if(s!==lastSig){ render(); } }
 
   function updateStats(){
-    const live=gifts.filter(g=>!g.deleted);
+    const live=gifts;
     $("stTotal").textContent=live.length;
     const bought=live.filter(g=>g.bought);
     $("stBought").textContent=bought.length;
@@ -480,7 +494,7 @@
   }
 
   function renderSummary(){
-    const bought=gifts.filter(g=>!g.deleted&&g.bought);
+    const bought=gifts.filter(g=>g.bought);
     const sumList=$("sumList");
     if(bought.length===0){
       sumList.innerHTML=`<div style="color:var(--muted);font-size:14px;padding:6px 0;">还没有决定要买的礼物，去上面挑挑吧 👆</div>`;
@@ -527,7 +541,7 @@
   // ---------- events ----------
   $("grid").addEventListener("click",e=>{
     const btn=e.target.closest(".act");if(!btn)return;
-    const id=btn.dataset.id,act=btn.dataset.act;
+    const id=parseInt(btn.dataset.id,10),act=btn.dataset.act;
     const g=gifts.find(x=>x.id===id);if(!g)return;
     if(act==="vote")toggleVote(id);
     else if(act==="buy")toggleBuy(id);
@@ -537,7 +551,7 @@
   $("filters").addEventListener("click",e=>{
     const c=e.target.closest(".chip");if(!c)return;
     [...document.querySelectorAll(".chip")].forEach(x=>x.classList.remove("active"));
-    c.classList.add("active");filter=c.dataset.f;render();
+    c.classList.add("active");filter=c.dataset.f;renderIfChanged();
   });
 
   $("addBtn").onclick=()=>{
@@ -555,17 +569,16 @@
     const price=Math.max(0,parseFloat($("fPrice").value)||0);
     const btn=$("saveBtn");btn.disabled=true;
     try{
-      addGift({name,emoji:pickedEmoji,by,price,note:$("fNote").value.trim()});
-      $("overlay").classList.remove("show");confettiBurst(24);toast("🎉 已丢进礼物池！记得点「分享链接」同步给朋友");
+      await addGift({name,emoji:pickedEmoji,by,price,note:$("fNote").value.trim()});
+      $("overlay").classList.remove("show");confettiBurst(24);toast("🎉 已丢进礼物池，云端已同步！");
     }catch(e){toast("提交失败，请重试");}
     btn.disabled=false;
   };
 
   $("diceBtn").onclick=()=>{
-    const live=gifts.filter(g=>!g.deleted);
-    if(live.length===0){toast("先加点礼物再抽签呀～");return;}
-    const pool=live.filter(g=>!g.bought);
-    const arr=pool.length?pool:live;
+    if(gifts.length===0){toast("先加点礼物再抽签呀～");return;}
+    const pool=gifts.filter(g=>!g.bought);
+    const arr=pool.length?pool:gifts;
     const pick=arr[Math.floor(Math.random()*arr.length)];
     confettiBurst(40);
     toast(`🎲 不如就选「${pick.name}」（${pick.by} 推荐）！`);
@@ -574,13 +587,16 @@
       card.animate([{transform:"scale(1)"},{transform:"scale(1.08)"},{transform:"scale(1)"}],{duration:700});}
   };
 
-  $("shareBtn").onclick=shareLink;
-  $("importBtn").onclick=importLink;
+  $("shareBtn").onclick=()=>{
+    const u=location.href;
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(u).then(()=>toast("🔗 邀请链接已复制，发群里朋友打开即同步")).catch(()=>prompt("复制链接发群里：",u));
+    }else{prompt("复制链接发群里：",u);}
+  };
 
-  $("clearBtn").onclick=()=>{
-    const live=gifts.filter(g=>!g.deleted);
-    if(live.length===0){toast("已经是空的啦");return;}
-    if(confirm("确定清空整个礼物池吗？此操作会删除所有人的数据，不可撤销。"))clearAll();
+  $("clearBtn").onclick=async()=>{
+    if(gifts.length===0){toast("已经是空的啦");return;}
+    if(confirm("确定清空整个礼物池吗？会删除云端所有人的数据，不可撤销。")){await clearAll();toast("已清空");}
   };
 
   const meInput=$("meName");
@@ -637,10 +653,11 @@
   }
 
   // ---------- boot ----------
-  gifts=load();
+  gifts=[];
   renderSeed();
-  applyHash();
-  render();
+  render(); // 先渲染空态
+  refresh(); // 拉取云端
+  setInterval(refresh,4000); // 每 4 秒自动同步，大家填的立刻互相看到
 })();
 </script>
 </body>
